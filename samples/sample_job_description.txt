@@ -1,0 +1,21 @@
+Job Title: Clinical Data Programmer II
+
+We are looking for a Clinical Data Programmer to join our Biometrics team.
+The ideal candidate has hands-on experience with SDTM and ADaM datasets,
+strong SQL and Python skills, and familiarity with CDISC standards and
+regulatory submissions (FDA, EMA, PMDA).
+
+Responsibilities:
+- Develop and validate SDTM and ADaM datasets for clinical trials
+- Write Define.xml specifications and support regulatory submissions
+- Perform data validation and quality checks using SQL and Python
+- Collaborate with Biostatistics, Data Management, and Clinical Operations
+- Support automation initiatives to improve programming efficiency
+
+Requirements:
+- 3+ years of experience in clinical data programming
+- Proficiency in SQL, SAS, and/or Python
+- Strong understanding of CDISC, SDTM, and ADaM standards
+- Experience with regulatory submissions (FDA, EMA, PMDA) preferred
+- Excellent communication and cross-functional collaboration skills
+- Experience with AWS or cloud data pipelines is a plus

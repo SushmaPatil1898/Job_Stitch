@@ -1,0 +1,31 @@
+Sushma Patil
+Senior Clinical Data Programmer
+
+SUMMARY
+Clinical data programmer with 5 years of experience delivering SDTM datasets
+and supporting regulatory submissions. Skilled in SQL, Python, and CDISC
+standards, with a track record of collaborating across Data Management,
+Biostatistics, and Clinical Operations.
+
+SKILLS
+SQL, Python, SAS, CDISC, SDTM, ADaM, Define.xml, Data Validation,
+Clinical Data Management, Excel, Git, Communication, Teamwork
+
+EXPERIENCE
+Senior Clinical Data Programmer, Accenture (2021 - Present)
+- Built SDTM datasets for 12+ clinical trials across FDA and EMA submissions
+- Developed a Python/Pandas tool to automate Define.xml variance checking,
+  cutting manual review time by 40%
+- Partnered with Biostatistics and Clinical Operations to validate data
+  deliverables ahead of regulatory deadlines
+
+Clinical Data Programmer, Accenture (2019 - 2021)
+- Supported data management workflows for Phase II and III trials
+- Wrote SQL queries and macros for data cleaning and validation
+- Collaborated cross-functionally with Data Management teams
+
+EDUCATION
+B.Tech in Computer Science
+
+CERTIFICATIONS
+CDISC SDTM Fundamentals

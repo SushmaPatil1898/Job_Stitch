@@ -1,0 +1,51 @@
+{
+  "Programming Languages": [
+    "python", "java", "javascript", "typescript", "c++", "c#", "sql", "r",
+    "go", "golang", "ruby", "php", "swift", "kotlin", "scala", "matlab",
+    "sas", "vba", "bash", "shell scripting", "html", "css"
+  ],
+  "Data & Analytics": [
+    "sql", "excel", "power bi", "tableau", "pandas", "numpy", "spark",
+    "pyspark", "hadoop", "etl", "data warehousing", "data modeling",
+    "data visualization", "statistics", "a/b testing", "machine learning",
+    "deep learning", "nlp", "data cleaning", "sdtm", "adam", "cdisc",
+    "clinical data management", "define.xml", "data validation"
+  ],
+  "Cloud & DevOps": [
+    "aws", "azure", "gcp", "google cloud", "docker", "kubernetes", "ci/cd",
+    "jenkins", "terraform", "git", "github", "gitlab", "linux", "s3",
+    "lambda", "cloudformation", "devops", "microservices", "rest api",
+    "fastapi", "flask", "django"
+  ],
+  "Databases": [
+    "mysql", "postgresql", "mongodb", "oracle", "sql server", "redis",
+    "dynamodb", "snowflake", "elasticsearch", "nosql"
+  ],
+  "Project & Product Management": [
+    "agile", "scrum", "kanban", "jira", "confluence", "project management",
+    "product management", "stakeholder management", "roadmap planning",
+    "risk management", "budgeting", "vendor management"
+  ],
+  "Business & Marketing": [
+    "digital marketing", "seo", "sem", "content marketing", "social media",
+    "google analytics", "crm", "salesforce", "email marketing",
+    "market research", "financial modeling", "forecasting", "accounting",
+    "bookkeeping"
+  ],
+  "Design & Product": [
+    "figma", "adobe photoshop", "adobe illustrator", "ui design",
+    "ux design", "wireframing", "prototyping", "user research",
+    "design systems"
+  ],
+  "Regulatory & Life Sciences": [
+    "fda", "ema", "pmda", "gcp compliance", "clinical trials",
+    "regulatory submissions", "biostatistics", "pharmacovigilance",
+    "gxp", "ich guidelines"
+  ],
+  "Soft Skills": [
+    "communication", "leadership", "teamwork", "problem solving",
+    "critical thinking", "time management", "collaboration",
+    "presentation skills", "mentoring", "adaptability",
+    "attention to detail", "cross-functional collaboration"
+  ]
+}
