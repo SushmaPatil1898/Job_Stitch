@@ -47,15 +47,17 @@ streamlit run app.py
 This opens the app in your browser at `http://localhost:8501`. Try it out
 with the sample files in `samples/` first.
 
-To try the optional AI mode, also install one of:
+`requirements.txt` already includes the `openai` and `anthropic` packages
+needed for the optional AI mode. You do **not** need an API key to use the
+core matching and suggestions, though — that part is 100% free and runs
+locally.
 
-```bash
-pip install openai        # if you'll use an OpenAI key
-pip install anthropic     # if you'll use an Anthropic key
-```
-
-You do **not** need an API key to use the core matching and suggestions —
-that part is 100% free and runs locally.
+If you do want the AI-powered suggestions, the simplest free option is
+**Groq**: sign up at [console.groq.com](https://console.groq.com) (no
+credit card required), create an API key under "API Keys", then in the
+app check "Enable AI-powered suggestions", pick **groq** as the provider,
+and paste your key in. OpenAI and Anthropic keys work too if you already
+have one, but both require a paid account.
 
 ## Sharing it with friends (free hosting)
 

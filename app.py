@@ -90,7 +90,19 @@ with st.expander("⚙️ Optional: enable AI-powered suggestions"):
     ai_enabled = st.checkbox("Enable AI-powered suggestions")
     ai_provider, ai_api_key = None, None
     if ai_enabled:
-        ai_provider = st.selectbox("Provider", ["openai", "anthropic"])
+        ai_provider = st.selectbox(
+            "Provider",
+            ["groq", "openai", "anthropic"],
+            help=(
+                "Groq is free (no credit card needed) and works well for this. "
+                "OpenAI and Anthropic also work if you already have a paid key with them."
+            ),
+        )
+        if ai_provider == "groq":
+            st.caption(
+                "Get a free key at [console.groq.com/keys](https://console.groq.com/keys) "
+                "— just sign up, no credit card required."
+            )
         ai_api_key = st.text_input(f"Your {ai_provider} API key", type="password")
 
 analyze_clicked = st.button("🔍 Analyze fit", type="primary", use_container_width=True)

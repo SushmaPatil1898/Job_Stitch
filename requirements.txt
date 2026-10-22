@@ -5,7 +5,10 @@ python-docx>=1.1
 reportlab>=4.0
 numpy>=1.24
 
-# Optional: only needed if you enable "AI-powered suggestions" mode in the app.
-# Uncomment whichever provider you want to use, or install manually.
-# openai>=1.30
-# anthropic>=0.34
+# Needed for the optional "AI-powered suggestions" mode in the app.
+# openai also powers the free Groq provider (Groq exposes an
+# OpenAI-compatible API), so it's required, not optional, for that to work
+# on the deployed app. anthropic is included too so that provider works
+# out of the box as well.
+openai>=1.30
+anthropic>=0.34

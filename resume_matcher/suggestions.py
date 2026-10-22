@@ -162,13 +162,39 @@ def generate_ai_suggestions(
     api_key: str,
 ) -> str:
     """
-    provider: "openai" or "anthropic"
+    provider: "groq" (free), "openai", or "anthropic"
     Raises RuntimeError with a friendly message on any failure (missing
     package, bad key, network issue) so the caller can display it cleanly.
     """
     prompt = _build_ai_prompt(resume_text, jd_text, match)
 
-    if provider == "openai":
+    if provider == "groq":
+        # Groq hosts open models (Llama, etc.) behind an OpenAI-compatible
+        # API, and its free tier needs no credit card -- so we just reuse
+        # the openai package with a different base_url instead of adding
+        # a whole new SDK dependency.
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise RuntimeError(
+                "The 'openai' package isn't installed. Run "
+                "'pip install openai' to enable AI suggestions."
+            ) from exc
+        try:
+            client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": _AI_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=600,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"Groq request failed: {exc}") from exc
+
+    elif provider == "openai":
         try:
             from openai import OpenAI
         except ImportError as exc:
