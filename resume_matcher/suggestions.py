@@ -169,8 +169,22 @@ def _call_llm(
                     {"role": "user", "content": user_prompt},
                 ],
                 max_tokens=max_tokens,
+                # gpt-oss is a "reasoning" model -- it spends part of the
+                # token budget on hidden chain-of-thought before writing the
+                # actual answer. Without this, long outputs (like a full
+                # rewritten resume) can get cut off mid-way because the
+                # reasoning ate most of max_tokens. "low" keeps reasoning
+                # brief so the visible answer gets the token budget instead.
+                extra_body={"reasoning_effort": "low"},
             )
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content.strip()
+            finish_reason = response.choices[0].finish_reason
+            if finish_reason == "length" and content:
+                content += (
+                    "\n\n[Note: the AI response was cut off before finishing "
+                    "-- try again, or shorten the input resume/JD.]"
+                )
+            return content
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"Groq request failed: {exc}") from exc
 
@@ -192,7 +206,13 @@ def _call_llm(
                 ],
                 max_tokens=max_tokens,
             )
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content.strip()
+            if response.choices[0].finish_reason == "length" and content:
+                content += (
+                    "\n\n[Note: the AI response was cut off before finishing "
+                    "-- try again, or shorten the input resume/JD.]"
+                )
+            return content
         except Exception as exc:  # noqa: BLE001 - surface any API error plainly
             raise RuntimeError(f"OpenAI request failed: {exc}") from exc
 
@@ -212,7 +232,13 @@ def _call_llm(
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
             )
-            return response.content[0].text.strip()
+            content = response.content[0].text.strip()
+            if response.stop_reason == "max_tokens" and content:
+                content += (
+                    "\n\n[Note: the AI response was cut off before finishing "
+                    "-- try again, or shorten the input resume/JD.]"
+                )
+            return content
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"Anthropic request failed: {exc}") from exc
 
@@ -250,7 +276,7 @@ def generate_ai_suggestions(
     api_key: str,
 ) -> str:
     prompt = _build_ai_prompt(resume_text, jd_text, match)
-    return _call_llm(provider, api_key, _AI_SYSTEM_PROMPT, prompt, max_tokens=600)
+    return _call_llm(provider, api_key, _AI_SYSTEM_PROMPT, prompt, max_tokens=1200)
 
 
 _RESUME_REWRITE_SYSTEM_PROMPT = (
@@ -289,7 +315,7 @@ def generate_updated_resume(
         "experience, don't fabricate anything new."
     )
     return _call_llm(
-        provider, api_key, _RESUME_REWRITE_SYSTEM_PROMPT, prompt, max_tokens=1600
+        provider, api_key, _RESUME_REWRITE_SYSTEM_PROMPT, prompt, max_tokens=6000
     )
 
 
@@ -319,5 +345,5 @@ def generate_similar_organizations(
         "List 20 organizations likely to hire for similar roles."
     )
     return _call_llm(
-        provider, api_key, _SIMILAR_ORGS_SYSTEM_PROMPT, prompt, max_tokens=900
+        provider, api_key, _SIMILAR_ORGS_SYSTEM_PROMPT, prompt, max_tokens=1600
     )
