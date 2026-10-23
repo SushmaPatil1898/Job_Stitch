@@ -93,3 +93,40 @@ def parse_pasted_text(text: str, label: str = "pasted text") -> ParsedDocument:
         char_count=len(text),
         word_count=len(text.split()),
     )
+
+
+# Common resume section headers -- used as a stopping point for
+# extract_header_lines() below, since the name/title/contact block always
+# comes before the first of these.
+_SECTION_KEYWORDS = {
+    "summary", "objective", "profile", "about",
+    "experience", "work experience", "employment", "employment history",
+    "work history", "professional experience",
+    "skills", "technical skills", "core competencies", "key skills",
+    "education", "academic background",
+    "certifications", "certificates", "licenses",
+    "projects", "key projects",
+}
+
+
+def extract_header_lines(resume_text: str, max_lines: int = 4) -> list[str]:
+    """
+    Pulls out the first few lines of a resume -- name, job title, and
+    contact details (phone/email/LinkedIn/location) -- which normally sit
+    before the first real section. Used so that information always makes
+    it into a rewritten/exported version of the resume, even if an AI
+    rewrite step drops it.
+    """
+    header: list[str] = []
+    for raw_line in resume_text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            if header:
+                break
+            continue
+        if line.lower().rstrip(":") in _SECTION_KEYWORDS:
+            break
+        header.append(line)
+        if len(header) >= max_lines:
+            break
+    return header

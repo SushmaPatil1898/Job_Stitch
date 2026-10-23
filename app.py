@@ -25,6 +25,7 @@ from resume_matcher.exporting import (
 from resume_matcher.matching import compute_match
 from resume_matcher.parsing import (
     UnsupportedFileTypeError,
+    extract_header_lines,
     parse_pasted_text,
     parse_uploaded_file,
 )
@@ -336,8 +337,9 @@ if "last_result" in st.session_state:
                     updated_text = generate_updated_resume(
                         r["resume_text"], r["jd_text"], match, ai_provider, ai_api_key
                     )
+                    header_lines = extract_header_lines(r["resume_text"])
                     st.session_state["updated_resume_pdf"] = build_updated_resume_pdf(
-                        updated_text
+                        updated_text, header_lines
                     )
             except RuntimeError as exc:
                 st.warning(str(exc))

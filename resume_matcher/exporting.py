@@ -214,7 +214,9 @@ def build_pdf_report(
 _HEADING_LINE = re.compile(r"^[A-Z][A-Z0-9 /&\-]{2,40}$")
 
 
-def build_updated_resume_pdf(resume_text: str, candidate_name: str = "") -> bytes:
+def build_updated_resume_pdf(
+    resume_text: str, header_lines: list[str] | None = None
+) -> bytes:
     """
     Formats an AI-tailored resume (plain text, ALL CAPS section headers on
     their own line, '-' bullet points -- see
@@ -222,6 +224,13 @@ def build_updated_resume_pdf(resume_text: str, candidate_name: str = "") -> byte
     clean, standard black-on-white PDF meant to actually be submitted to an
     employer. Deliberately NOT styled with the app's purple/dark branding --
     a resume you send to a recruiter should look like a normal resume.
+
+    header_lines: the name/title/contact block from the ORIGINAL resume
+    (see parsing.extract_header_lines), inserted here rather than trusted
+    to the AI rewrite -- the rewrite is explicitly told not to repeat this
+    info, so it always makes it into the final PDF exactly as the
+    candidate wrote it, with no risk of the AI paraphrasing a phone
+    number or email address.
     """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -259,11 +268,16 @@ def build_updated_resume_pdf(resume_text: str, candidate_name: str = "") -> byte
         leftIndent=14,
         bulletIndent=2,
     )
+    contact_style = ParagraphStyle(
+        "ResumeContact", parent=body_style, textColor=colors.black, fontSize=10
+    )
 
     story = []
-    if candidate_name:
-        story.append(Paragraph(escape(_pdf_safe(candidate_name)), name_style))
-        story.append(Spacer(1, 8))
+    if header_lines:
+        story.append(Paragraph(escape(_pdf_safe(header_lines[0])), name_style))
+        for line in header_lines[1:]:
+            story.append(Paragraph(escape(_pdf_safe(line)), contact_style))
+        story.append(Spacer(1, 10))
 
     bullets: list[ListItem] = []
 
