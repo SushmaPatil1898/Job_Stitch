@@ -166,14 +166,14 @@ def build_pdf_report(
     story = [
         Paragraph("Job Stitch Report", title_style),
         Spacer(1, 6),
-        Paragraph(f"Resume: {_pdf_safe(resume_name)}", italic_style),
-        Paragraph(f"Job description: {_pdf_safe(jd_name)}", italic_style),
+        Paragraph(f"Resume: {escape(_pdf_safe(resume_name))}", italic_style),
+        Paragraph(f"Job description: {escape(_pdf_safe(jd_name))}", italic_style),
         Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", italic_style),
         Spacer(1, 14),
         Paragraph("Overall Match", heading_style),
-        Paragraph(f"<b>{match.overall_score} / 100 — {verdict.label}</b>", body_style),
+        Paragraph(f"<b>{match.overall_score} / 100 — {escape(verdict.label)}</b>", body_style),
         Spacer(1, 4),
-        Paragraph(_pdf_safe(verdict.message), body_style),
+        Paragraph(escape(_pdf_safe(verdict.message)), body_style),
         Spacer(1, 4),
         Paragraph(
             f"Skill overlap score: {match.skill_overlap_score}/100 &nbsp;&nbsp; "
@@ -183,19 +183,19 @@ def build_pdf_report(
         Spacer(1, 10),
         Paragraph("Matched Skills", heading_style),
         Paragraph(
-            _pdf_safe(", ".join(match.matched_skills)) if match.matched_skills else "None detected.",
+            escape(_pdf_safe(", ".join(match.matched_skills))) if match.matched_skills else "None detected.",
             body_style,
         ),
         Spacer(1, 10),
         Paragraph("Skills in the JD but not your resume", heading_style),
         Paragraph(
-            _pdf_safe(", ".join(match.missing_skills)) if match.missing_skills else "None — great coverage!",
+            escape(_pdf_safe(", ".join(match.missing_skills))) if match.missing_skills else "None — great coverage!",
             body_style,
         ),
         Spacer(1, 10),
         Paragraph("Suggestions", heading_style),
         ListFlowable(
-            [ListItem(Paragraph(_pdf_safe(tip), body_style)) for tip in suggestions],
+            [ListItem(Paragraph(escape(_pdf_safe(tip)), body_style)) for tip in suggestions],
             bulletType="bullet",
         ),
     ]
@@ -205,7 +205,7 @@ def build_pdf_report(
         story.append(Paragraph("AI-Powered Suggestions", heading_style))
         for line in ai_suggestions.split("\n"):
             if line.strip():
-                story.append(Paragraph(_pdf_safe(line.strip()), body_style))
+                story.append(Paragraph(escape(_pdf_safe(line.strip())), body_style))
 
     doc.build(story)
     return buffer.getvalue()
