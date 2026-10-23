@@ -169,10 +169,11 @@ def generate_ai_suggestions(
     prompt = _build_ai_prompt(resume_text, jd_text, match)
 
     if provider == "groq":
-        # Groq hosts open models (Llama, etc.) behind an OpenAI-compatible
-        # API, and its free tier needs no credit card -- so we just reuse
-        # the openai package with a different base_url instead of adding
-        # a whole new SDK dependency.
+        # Groq hosts open-weight models behind an OpenAI-compatible API, so
+        # we just reuse the openai package with a different base_url
+        # instead of adding a whole new SDK dependency. gpt-oss-20b is on
+        # Groq's free developer plan (their flagship Llama models now sit
+        # behind an Enterprise-only plan, which a regular free key can't use).
         try:
             from openai import OpenAI
         except ImportError as exc:
@@ -183,7 +184,7 @@ def generate_ai_suggestions(
         try:
             client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
             response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-20b",
                 messages=[
                     {"role": "system", "content": _AI_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
