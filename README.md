@@ -1,4 +1,6 @@
-# AI Resume Matcher
+# Job Stitch
+
+*Align Your Potential.*
 
 A Streamlit web app that compares a resume against a job description,
 scores how well they match, highlights missing skills/keywords, suggests
@@ -20,7 +22,7 @@ generation (python-docx, reportlab), and a Streamlit UI.
 ## Project structure
 
 ```
-ai-resume-matcher/
+job-stitch/
 ├── app.py                      # Streamlit app (entry point)
 ├── resume_matcher/
 │   ├── parsing.py              # PDF/DOCX/TXT -> plain text
@@ -28,6 +30,10 @@ ai-resume-matcher/
 │   ├── suggestions.py          # Rule-based tips + optional AI suggestions
 │   ├── exporting.py            # Builds the .docx / .pdf report
 │   └── data/skills.json        # Curated skills dictionary used for matching
+├── assets/
+│   ├── logo.png                # Full logo lockup (icon + wordmark + tagline)
+│   └── icon.png                # Icon-only crop, used as the browser favicon
+├── .streamlit/config.toml      # Purple/dark theme matching the logo
 ├── samples/                    # Example resume + JD to try the app with
 ├── requirements.txt
 └── README.md
@@ -36,8 +42,8 @@ ai-resume-matcher/
 ## Running it locally
 
 ```bash
-git clone https://github.com/<your-username>/ai-resume-matcher.git
-cd ai-resume-matcher
+git clone https://github.com/<your-username>/job-stitch.git
+cd job-stitch
 python -m venv venv
 source venv/bin/activate        # on Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -73,11 +79,11 @@ The easiest way to let friends use this without installing anything:
 ## Pushing to GitHub
 
 ```bash
-# from inside the ai-resume-matcher folder
+# from inside the job-stitch folder
 git add .
-git commit -m "Initial commit: AI resume matcher"
+git commit -m "Initial commit: Job Stitch"
 git branch -M main
-git remote add origin https://github.com/<your-username>/ai-resume-matcher.git
+git remote add origin https://github.com/<your-username>/job-stitch.git
 git push -u origin main
 ```
 

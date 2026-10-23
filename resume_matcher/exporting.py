@@ -1,7 +1,7 @@
 """
 exporting.py
 ------------
-Builds a downloadable "Resume Fit Report" -- match score, matched/missing
+Builds a downloadable "Job Stitch Report" -- match score, matched/missing
 skills, and suggestions -- as either a .docx or a .pdf, returned as raw
 bytes so Streamlit's download_button can serve them directly without
 touching disk.
@@ -40,7 +40,7 @@ def _report_sections(
 ):
     """Shared content plan so DOCX and PDF stay in sync."""
     return {
-        "title": "Resume Fit Report",
+        "title": "Job Stitch Report",
         "generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "resume_name": resume_name,
         "jd_name": jd_name,
@@ -61,8 +61,8 @@ def build_docx_report(
 ) -> bytes:
     doc = Document()
 
-    title = doc.add_heading("Resume Fit Report", level=0)
-    title.runs[0].font.color.rgb = RGBColor(0x1F, 0x4E, 0x79)
+    title = doc.add_heading("Job Stitch Report", level=0)
+    title.runs[0].font.color.rgb = RGBColor(0xA8, 0x55, 0xF7)
 
     meta = doc.add_paragraph()
     meta.add_run(f"Resume: {resume_name}\n").italic = True
@@ -123,14 +123,14 @@ def build_pdf_report(
     )
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
-        "ReportTitle", parent=styles["Title"], textColor=colors.HexColor("#1F4E79")
+        "ReportTitle", parent=styles["Title"], textColor=colors.HexColor("#A855F7")
     )
     heading_style = styles["Heading2"]
     body_style = styles["BodyText"]
     italic_style = ParagraphStyle("Italic", parent=body_style, fontName="Helvetica-Oblique")
 
     story = [
-        Paragraph("Resume Fit Report", title_style),
+        Paragraph("Job Stitch Report", title_style),
         Spacer(1, 6),
         Paragraph(f"Resume: {resume_name}", italic_style),
         Paragraph(f"Job description: {jd_name}", italic_style),

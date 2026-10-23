@@ -1,15 +1,19 @@
 """
-AI Resume Matcher — Streamlit app
-==================================
-Upload (or paste) a resume and a job description, get a fit score, see
-which skills match and which are missing, get improvement suggestions,
-and download the whole analysis as a Word or PDF report.
+Job Stitch — Streamlit app
+===========================
+"Align Your Potential." Upload (or paste) a resume and a job description,
+get a fit score, see which skills match and which are missing, get
+improvement suggestions, and download the whole analysis as a Word or PDF
+report.
 
 Run locally:    streamlit run app.py
 Deploy free:    https://share.streamlit.io  (see README.md)
 """
 
+from pathlib import Path
+
 import streamlit as st
+from PIL import Image
 
 from resume_matcher.exporting import build_docx_report, build_pdf_report
 from resume_matcher.matching import compute_match
@@ -24,7 +28,10 @@ from resume_matcher.suggestions import (
     get_verdict,
 )
 
-st.set_page_config(page_title="AI Resume Matcher", page_icon="📄", layout="wide")
+_ASSETS_DIR = Path(__file__).parent / "assets"
+_ICON = Image.open(_ASSETS_DIR / "icon.png")
+
+st.set_page_config(page_title="Job Stitch", page_icon=_ICON, layout="wide")
 
 
 def get_document_text(label: str, key_prefix: str):
@@ -63,7 +70,16 @@ def get_document_text(label: str, key_prefix: str):
         return doc.text, doc.source_name
 
 
-st.title("📄 AI Resume Matcher")
+header_icon_col, header_title_col = st.columns([1, 7])
+with header_icon_col:
+    st.image(str(_ASSETS_DIR / "icon.png"), width=80)
+with header_title_col:
+    st.title("Job Stitch")
+    st.markdown(
+        "<p style='color:#A855F7; font-weight:600; margin-top:-12px;'>"
+        "Align Your Potential.</p>",
+        unsafe_allow_html=True,
+    )
 st.write(
     "Upload a resume and a job description to see how well they match, "
     "what's missing, and how to improve your resume before you apply."
@@ -184,7 +200,7 @@ if "last_result" in st.session_state:
         st.download_button(
             "⬇️ Download as Word (.docx)",
             data=docx_bytes,
-            file_name="resume_fit_report.docx",
+            file_name="job_stitch_report.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             use_container_width=True,
         )
@@ -195,7 +211,7 @@ if "last_result" in st.session_state:
         st.download_button(
             "⬇️ Download as PDF",
             data=pdf_bytes,
-            file_name="resume_fit_report.pdf",
+            file_name="job_stitch_report.pdf",
             mime="application/pdf",
             use_container_width=True,
         )

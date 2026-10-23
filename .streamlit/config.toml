@@ -1,0 +1,10 @@
+[theme]
+# Colors sampled directly from the Job Stitch logo (assets/logo.png) so the
+# app matches the brand: deep near-black purple background, vivid violet
+# accent, light lavender text.
+base = "dark"
+primaryColor = "#A855F7"
+backgroundColor = "#0A0714"
+secondaryBackgroundColor = "#1A1124"
+textColor = "#F3EEFE"
+font = "sans serif"
