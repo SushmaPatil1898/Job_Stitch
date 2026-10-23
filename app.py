@@ -66,10 +66,24 @@ st.markdown(
         line-height: 1.1;
         margin-bottom: 0;
     }
-    .jobstitch-title .word-job { color: #FFFFFF; }
+    /* Colors sampled directly from the Job Stitch logo artwork (assets/logo.png)
+       so the on-page title matches it exactly: "Job" in a light silvery
+       lavender-to-muted-purple gradient, "Stitch" in a lavender-to-deep-violet
+       gradient. */
+    .jobstitch-title .word-job {
+        background: linear-gradient(180deg, #F3E9FB 0%, #9B8FC2 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+    }
     .jobstitch-title .word-stitch {
-        color: #C13CFF;
-        text-shadow: 0 0 18px rgba(193, 60, 255, 0.85), 0 0 36px rgba(193, 60, 255, 0.45);
+        background: linear-gradient(180deg, #E8C8F5 0%, #4B0FC8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        filter: drop-shadow(0 0 6px rgba(193, 60, 255, 0.55));
     }
     .jobstitch-tagline {
         color: #C13CFF;
@@ -77,6 +91,36 @@ st.markdown(
         font-size: 1.05rem;
         margin-top: -4px;
         text-shadow: 0 0 10px rgba(193, 60, 255, 0.6);
+    }
+    .jobstitch-header-text {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        height: 150px;
+    }
+
+    /* Luminous purple buttons (Analyze fit, downloads, Update as per
+       requirement, Find similar organizations) with a glow on hover. */
+    .stButton button, .stDownloadButton button {
+        background-color: #C13CFF !important;
+        color: #FFFFFF !important;
+        border: 1px solid #C13CFF !important;
+        transition: box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+    .stButton button:hover, .stDownloadButton button:hover {
+        background-color: #D264FF !important;
+        border-color: #D264FF !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 0 16px rgba(193, 60, 255, 0.85), 0 0 32px rgba(193, 60, 255, 0.55);
+    }
+    .stButton button:active, .stDownloadButton button:active {
+        background-color: #A52BE0 !important;
+        border-color: #A52BE0 !important;
+    }
+    .stButton button:focus:not(:active), .stDownloadButton button:focus:not(:active) {
+        color: #FFFFFF !important;
+        border-color: #C13CFF !important;
+        box-shadow: 0 0 10px rgba(193, 60, 255, 0.6);
     }
     </style>
     """,
@@ -125,14 +169,13 @@ with header_icon_col:
     st.image(str(_ASSETS_DIR / "icon.png"), width=150)
 with header_title_col:
     st.markdown(
+        '<div class="jobstitch-header-text">'
         '<div class="jobstitch-title">'
         '<span class="word-job">Job</span> '
         '<span class="word-stitch">Stitch</span>'
+        "</div>"
+        '<div class="jobstitch-tagline">Align Your Potential.</div>'
         "</div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="jobstitch-tagline">Align Your Potential.</div>',
         unsafe_allow_html=True,
     )
 st.write(
