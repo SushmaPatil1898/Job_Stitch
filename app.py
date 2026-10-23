@@ -95,7 +95,7 @@ st.markdown(
     .jobstitch-header-text {
         display: flex;
         flex-direction: column;
-        justify-content: flex-end;
+        justify-content: center;
         height: 150px;
     }
 
@@ -115,7 +115,14 @@ st.markdown(
     }
     .stButton button:active, .stDownloadButton button:active {
         background-color: #A52BE0 !important;
-        border-color: #A52BE0 !important;
+        /* Shiny metallic silver-white border that beams outward from
+           inside the button the moment it's clicked. */
+        border: 2px solid #F5F2FF !important;
+        box-shadow:
+            inset 0 0 14px 2px rgba(255, 255, 255, 0.85),
+            inset 0 0 3px 1px rgba(255, 255, 255, 0.95),
+            0 0 10px 2px rgba(245, 242, 255, 0.9),
+            0 0 26px rgba(193, 60, 255, 0.75) !important;
     }
     .stButton button:focus:not(:active), .stDownloadButton button:focus:not(:active) {
         color: #FFFFFF !important;
