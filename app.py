@@ -3,19 +3,25 @@ Job Stitch — Streamlit app
 ===========================
 "Align Your Potential." Upload (or paste) a resume and a job description,
 get a fit score, see which skills match and which are missing, get
-improvement suggestions, and download the whole analysis as a Word or PDF
-report.
+AI-tailored suggestions, a rewritten resume as a downloadable PDF, a list
+of similar organizations to research, and download the whole analysis as
+a Word or PDF report.
 
 Run locally:    streamlit run app.py
 Deploy free:    https://share.streamlit.io  (see README.md)
 """
 
+import os
 from pathlib import Path
 
 import streamlit as st
 from PIL import Image
 
-from resume_matcher.exporting import build_docx_report, build_pdf_report
+from resume_matcher.exporting import (
+    build_docx_report,
+    build_pdf_report,
+    build_updated_resume_pdf,
+)
 from resume_matcher.matching import compute_match
 from resume_matcher.parsing import (
     UnsupportedFileTypeError,
@@ -25,13 +31,57 @@ from resume_matcher.parsing import (
 from resume_matcher.suggestions import (
     generate_ai_suggestions,
     generate_rule_based_suggestions,
+    generate_similar_organizations,
+    generate_updated_resume,
     get_verdict,
 )
 
 _ASSETS_DIR = Path(__file__).parent / "assets"
 _ICON = Image.open(_ASSETS_DIR / "icon.png")
 
+# Fixed provider: the app ships with a built-in Groq key (free tier) so
+# visitors never have to find or paste in their own API key. Set via
+# Streamlit's Secrets manager in the Cloud app's settings (key
+# GROQ_API_KEY) -- never committed to the repo. Falls back to an
+# environment variable of the same name for local runs.
+_AI_PROVIDER = "groq"
+
+
+def _get_builtin_api_key() -> str:
+    try:
+        key = st.secrets.get("GROQ_API_KEY", "")
+    except Exception:
+        key = ""
+    return key or os.environ.get("GROQ_API_KEY", "")
+
+
 st.set_page_config(page_title="Job Stitch", page_icon=_ICON, layout="wide")
+
+st.markdown(
+    """
+    <style>
+    .jobstitch-title {
+        font-size: 2.6rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 0;
+    }
+    .jobstitch-title .word-job { color: #FFFFFF; }
+    .jobstitch-title .word-stitch {
+        color: #C13CFF;
+        text-shadow: 0 0 18px rgba(193, 60, 255, 0.85), 0 0 36px rgba(193, 60, 255, 0.45);
+    }
+    .jobstitch-tagline {
+        color: #C13CFF;
+        font-weight: 600;
+        font-size: 1.05rem;
+        margin-top: -4px;
+        text-shadow: 0 0 10px rgba(193, 60, 255, 0.6);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def get_document_text(label: str, key_prefix: str):
@@ -70,14 +120,19 @@ def get_document_text(label: str, key_prefix: str):
         return doc.text, doc.source_name
 
 
-header_icon_col, header_title_col = st.columns([1, 7])
+header_icon_col, header_title_col = st.columns([1, 6])
 with header_icon_col:
-    st.image(str(_ASSETS_DIR / "icon.png"), width=80)
+    st.image(str(_ASSETS_DIR / "icon.png"), width=150)
 with header_title_col:
-    st.title("Job Stitch")
     st.markdown(
-        "<p style='color:#A855F7; font-weight:600; margin-top:-12px;'>"
-        "Align Your Potential.</p>",
+        '<div class="jobstitch-title">'
+        '<span class="word-job">Job</span> '
+        '<span class="word-stitch">Stitch</span>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="jobstitch-tagline">Align Your Potential.</div>',
         unsafe_allow_html=True,
     )
 st.write(
@@ -95,31 +150,22 @@ with col2:
 
 st.divider()
 
-with st.expander("⚙️ Optional: enable AI-powered suggestions"):
-    st.write(
-        "The match score and suggestions above always work for free with "
-        "no setup. If you'd like more natural-language, tailored rewrite "
-        "suggestions (e.g. reworded bullet points), you can optionally "
-        "provide your own API key below. **Your key is only used for this "
-        "session and is never stored or logged.**"
+st.subheader("🤖 AI-Powered Tools")
+st.caption(
+    "Tailored suggestions, a resume rewritten for this job, and a list of "
+    "similar organizations — included free, no API key needed from you."
+)
+
+ai_provider = _AI_PROVIDER
+ai_api_key = _get_builtin_api_key()
+
+if not ai_api_key:
+    st.warning(
+        "⚠️ AI-powered tools are temporarily unavailable (no API key "
+        "configured for this app). The match score and suggestions below "
+        "still work fully — only the AI-written suggestions, resume "
+        "rewrite, and similar-organizations list are affected."
     )
-    ai_enabled = st.checkbox("Enable AI-powered suggestions")
-    ai_provider, ai_api_key = None, None
-    if ai_enabled:
-        ai_provider = st.selectbox(
-            "Provider",
-            ["groq", "openai", "anthropic"],
-            help=(
-                "Groq is free (no credit card needed) and works well for this. "
-                "OpenAI and Anthropic also work if you already have a paid key with them."
-            ),
-        )
-        if ai_provider == "groq":
-            st.caption(
-                "Get a free key at [console.groq.com/keys](https://console.groq.com/keys) "
-                "— just sign up, no credit card required."
-            )
-        ai_api_key = st.text_input(f"Your {ai_provider} API key", type="password")
 
 analyze_clicked = st.button("🔍 Analyze fit", type="primary", use_container_width=True)
 
@@ -133,27 +179,29 @@ if analyze_clicked:
             tips = generate_rule_based_suggestions(resume_text, match)
 
             ai_text = None
-            if ai_enabled:
-                if not ai_api_key:
-                    st.warning("AI mode is on but no API key was entered — showing free suggestions only.")
-                else:
-                    try:
-                        with st.spinner("Asking the AI for tailored suggestions..."):
-                            ai_text = generate_ai_suggestions(
-                                resume_text, jd_text, match, ai_provider, ai_api_key
-                            )
-                    except RuntimeError as exc:
-                        st.warning(str(exc))
+            if ai_api_key:
+                try:
+                    with st.spinner("Asking the AI for tailored suggestions..."):
+                        ai_text = generate_ai_suggestions(
+                            resume_text, jd_text, match, ai_provider, ai_api_key
+                        )
+                except RuntimeError as exc:
+                    st.warning(str(exc))
 
         st.session_state["last_result"] = {
             "resume_text": resume_text,
             "resume_name": resume_name,
+            "jd_text": jd_text,
             "jd_name": jd_name,
             "match": match,
             "verdict": verdict,
             "tips": tips,
             "ai_text": ai_text,
         }
+        # Clear any previously generated resume rewrite / org list, since
+        # they're tied to the previous analysis.
+        st.session_state.pop("updated_resume_pdf", None)
+        st.session_state.pop("similar_orgs_text", None)
 
 if "last_result" in st.session_state:
     r = st.session_state["last_result"]
@@ -189,6 +237,12 @@ if "last_result" in st.session_state:
     if r["ai_text"]:
         st.subheader("🤖 AI-powered suggestions")
         st.write(r["ai_text"])
+    elif not ai_api_key:
+        st.info(
+            "AI-powered suggestions aren't available right now (no API key "
+            "configured for this app) — the rule-based suggestions above "
+            "still apply."
+        )
 
     st.divider()
     st.subheader("Download this report")
@@ -216,8 +270,60 @@ if "last_result" in st.session_state:
             use_container_width=True,
         )
 
+    if ai_api_key:
+        st.divider()
+        st.subheader("🔄 Update your resume for this job")
+        st.write(
+            "Rewrites your resume to better match this job description — "
+            "reordering, rephrasing, and emphasizing your real experience "
+            "with the JD's language. It won't invent new experience, "
+            "employers, or dates."
+        )
+        update_clicked = st.button("Update as per requirement", use_container_width=True)
+        if update_clicked:
+            try:
+                with st.spinner("Rewriting your resume for this job..."):
+                    updated_text = generate_updated_resume(
+                        r["resume_text"], r["jd_text"], match, ai_provider, ai_api_key
+                    )
+                    st.session_state["updated_resume_pdf"] = build_updated_resume_pdf(
+                        updated_text
+                    )
+            except RuntimeError as exc:
+                st.warning(str(exc))
+
+        if "updated_resume_pdf" in st.session_state:
+            st.success("Your updated resume is ready.")
+            st.download_button(
+                "⬇️ Download updated resume (.pdf)",
+                data=st.session_state["updated_resume_pdf"],
+                file_name="updated_resume.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+
+        st.divider()
+        st.subheader("🏢 Find similar organizations")
+        st.write(
+            "AI-brainstormed list of ~20 organizations likely to have "
+            "similar roles, based on this job description — a starting "
+            "point for your own research, not a live job search."
+        )
+        orgs_clicked = st.button("Find similar organizations", use_container_width=True)
+        if orgs_clicked:
+            try:
+                with st.spinner("Brainstorming similar organizations..."):
+                    st.session_state["similar_orgs_text"] = generate_similar_organizations(
+                        r["jd_text"], ai_provider, ai_api_key
+                    )
+            except RuntimeError as exc:
+                st.warning(str(exc))
+
+        if "similar_orgs_text" in st.session_state:
+            st.write(st.session_state["similar_orgs_text"])
+
 st.divider()
 st.caption(
     "Built with Streamlit + scikit-learn. Skill matching runs entirely "
-    "locally and for free; AI suggestions are optional and use your own API key."
+    "locally and for free; AI tools are included at no cost to you."
 )

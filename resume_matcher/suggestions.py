@@ -132,6 +132,94 @@ def generate_rule_based_suggestions(resume_text: str, match: MatchResult) -> lis
     return tips
 
 
+def _call_llm(
+    provider: str,
+    api_key: str,
+    system_prompt: str,
+    user_prompt: str,
+    max_tokens: int = 600,
+) -> str:
+    """
+    Shared dispatcher used by every AI-powered feature (suggestions, resume
+    rewriting, similar-organizations brainstorming).
+
+    provider: "groq" (free), "openai", or "anthropic"
+    Raises RuntimeError with a friendly message on any failure (missing
+    package, bad key, network issue) so the caller can display it cleanly.
+    """
+    if provider == "groq":
+        # Groq hosts open-weight models behind an OpenAI-compatible API, so
+        # we just reuse the openai package with a different base_url
+        # instead of adding a whole new SDK dependency. gpt-oss-20b is on
+        # Groq's free developer plan (their flagship Llama models now sit
+        # behind an Enterprise-only plan, which a regular free key can't use).
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise RuntimeError(
+                "The 'openai' package isn't installed. Run "
+                "'pip install openai' to enable AI features."
+            ) from exc
+        try:
+            client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+            response = client.chat.completions.create(
+                model="openai/gpt-oss-20b",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=max_tokens,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"Groq request failed: {exc}") from exc
+
+    elif provider == "openai":
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise RuntimeError(
+                "The 'openai' package isn't installed. Run "
+                "'pip install openai' to enable AI features."
+            ) from exc
+        try:
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=max_tokens,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as exc:  # noqa: BLE001 - surface any API error plainly
+            raise RuntimeError(f"OpenAI request failed: {exc}") from exc
+
+    elif provider == "anthropic":
+        try:
+            import anthropic
+        except ImportError as exc:
+            raise RuntimeError(
+                "The 'anthropic' package isn't installed. Run "
+                "'pip install anthropic' to enable AI features."
+            ) from exc
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+            response = client.messages.create(
+                model="claude-3-5-haiku-latest",
+                max_tokens=max_tokens,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            return response.content[0].text.strip()
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"Anthropic request failed: {exc}") from exc
+
+    else:
+        raise RuntimeError(f"Unknown AI provider: {provider}")
+
+
 _AI_SYSTEM_PROMPT = (
     "You are a career coach helping a candidate tailor their resume to a "
     "specific job description. Be specific and concrete, referencing "
@@ -161,81 +249,75 @@ def generate_ai_suggestions(
     provider: str,
     api_key: str,
 ) -> str:
-    """
-    provider: "groq" (free), "openai", or "anthropic"
-    Raises RuntimeError with a friendly message on any failure (missing
-    package, bad key, network issue) so the caller can display it cleanly.
-    """
     prompt = _build_ai_prompt(resume_text, jd_text, match)
+    return _call_llm(provider, api_key, _AI_SYSTEM_PROMPT, prompt, max_tokens=600)
 
-    if provider == "groq":
-        # Groq hosts open-weight models behind an OpenAI-compatible API, so
-        # we just reuse the openai package with a different base_url
-        # instead of adding a whole new SDK dependency. gpt-oss-20b is on
-        # Groq's free developer plan (their flagship Llama models now sit
-        # behind an Enterprise-only plan, which a regular free key can't use).
-        try:
-            from openai import OpenAI
-        except ImportError as exc:
-            raise RuntimeError(
-                "The 'openai' package isn't installed. Run "
-                "'pip install openai' to enable AI suggestions."
-            ) from exc
-        try:
-            client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-            response = client.chat.completions.create(
-                model="openai/gpt-oss-20b",
-                messages=[
-                    {"role": "system", "content": _AI_SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=600,
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError(f"Groq request failed: {exc}") from exc
 
-    elif provider == "openai":
-        try:
-            from openai import OpenAI
-        except ImportError as exc:
-            raise RuntimeError(
-                "The 'openai' package isn't installed. Run "
-                "'pip install openai' to enable AI suggestions."
-            ) from exc
-        try:
-            client = OpenAI(api_key=api_key)
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": _AI_SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=600,
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as exc:  # noqa: BLE001 - surface any API error plainly
-            raise RuntimeError(f"OpenAI request failed: {exc}") from exc
+_RESUME_REWRITE_SYSTEM_PROMPT = (
+    "You are an expert resume writer. You rewrite resumes to better match "
+    "a specific job description. CRITICAL RULES: never invent employers, "
+    "job titles, dates, degrees, certifications, or achievements the "
+    "candidate did not state -- only rephrase, reorder, re-emphasize, and "
+    "incorporate the JD's terminology where it genuinely reflects what the "
+    "candidate already described. Output ONLY the final resume text, "
+    "structured with clear section headers in ALL CAPS on their own line "
+    "(e.g. SUMMARY, SKILLS, EXPERIENCE, EDUCATION), bullet points starting "
+    "with '-' for experience/achievements, and no commentary, preamble, or "
+    "markdown formatting (no **, no #) before, after, or around it."
+)
 
-    elif provider == "anthropic":
-        try:
-            import anthropic
-        except ImportError as exc:
-            raise RuntimeError(
-                "The 'anthropic' package isn't installed. Run "
-                "'pip install anthropic' to enable AI suggestions."
-            ) from exc
-        try:
-            client = anthropic.Anthropic(api_key=api_key)
-            response = client.messages.create(
-                model="claude-3-5-haiku-latest",
-                max_tokens=600,
-                system=_AI_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.content[0].text.strip()
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError(f"Anthropic request failed: {exc}") from exc
 
-    else:
-        raise RuntimeError(f"Unknown AI provider: {provider}")
+def generate_updated_resume(
+    resume_text: str,
+    jd_text: str,
+    match: MatchResult,
+    provider: str,
+    api_key: str,
+) -> str:
+    """Returns a full rewritten resume (plain text, section headers in ALL
+    CAPS, '-' bullets) tailored to the job description. Raises RuntimeError
+    on any failure, same as generate_ai_suggestions."""
+    prompt = (
+        f"ORIGINAL RESUME:\n{resume_text[:8000]}\n\n"
+        f"JOB DESCRIPTION:\n{jd_text[:4000]}\n\n"
+        f"Missing skills/keywords the JD asks for that may be worth "
+        f"foregrounding if the candidate's resume shows genuine experience "
+        f"with them: {', '.join(match.missing_skills) or 'none'}\n\n"
+        "Rewrite this resume to be as strong a match as possible for this "
+        "job description, following the rules in your system prompt. Keep "
+        "it truthful -- reorganize and rephrase the candidate's real "
+        "experience, don't fabricate anything new."
+    )
+    return _call_llm(
+        provider, api_key, _RESUME_REWRITE_SYSTEM_PROMPT, prompt, max_tokens=1600
+    )
+
+
+_SIMILAR_ORGS_SYSTEM_PROMPT = (
+    "You are a career research assistant. Given a job description, you "
+    "suggest companies/organizations likely to have similar roles, drawing "
+    "on your general knowledge of the industry. Be clear this is a "
+    "starting point for the candidate's own research, not a live job "
+    "search. Output ONLY a numbered list from 1 to 20, each line formatted "
+    "as 'Organization Name — one short phrase on why it's relevant "
+    "(industry/focus area)'. No preamble, no commentary, no markdown "
+    "formatting beyond the plain numbered list."
+)
+
+
+def generate_similar_organizations(
+    jd_text: str,
+    provider: str,
+    api_key: str,
+) -> str:
+    """Returns a numbered list (as text) of ~20 organizations likely to
+    have similar roles to the given job description, based on the model's
+    general knowledge -- NOT a live job board search. Raises RuntimeError
+    on any failure, same as generate_ai_suggestions."""
+    prompt = (
+        f"JOB DESCRIPTION:\n{jd_text[:4000]}\n\n"
+        "List 20 organizations likely to hire for similar roles."
+    )
+    return _call_llm(
+        provider, api_key, _SIMILAR_ORGS_SYSTEM_PROMPT, prompt, max_tokens=900
+    )

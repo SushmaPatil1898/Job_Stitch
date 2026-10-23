@@ -1,10 +1,10 @@
 [theme]
-# Colors sampled directly from the Job Stitch logo (assets/logo.png) so the
-# app matches the brand: deep near-black purple background, vivid violet
-# accent, light lavender text.
+# "Luminous purple and black" — a near-true-black background with a
+# vivid, glowing violet accent (matches the title/tagline glow in app.py
+# and the Job Stitch logo).
 base = "dark"
-primaryColor = "#A855F7"
-backgroundColor = "#0A0714"
-secondaryBackgroundColor = "#1A1124"
-textColor = "#F3EEFE"
+primaryColor = "#C13CFF"
+backgroundColor = "#070108"
+secondaryBackgroundColor = "#1B0B24"
+textColor = "#F6EEFB"
 font = "sans serif"

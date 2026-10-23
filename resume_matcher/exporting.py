@@ -10,7 +10,9 @@ touching disk.
 from __future__ import annotations
 
 import io
+import re
 from datetime import datetime
+from xml.sax.saxutils import escape
 
 from docx import Document
 from docx.shared import Pt, RGBColor
@@ -62,7 +64,7 @@ def build_docx_report(
     doc = Document()
 
     title = doc.add_heading("Job Stitch Report", level=0)
-    title.runs[0].font.color.rgb = RGBColor(0xA8, 0x55, 0xF7)
+    title.runs[0].font.color.rgb = RGBColor(0xC1, 0x3C, 0xFF)
 
     meta = doc.add_paragraph()
     meta.add_run(f"Resume: {resume_name}\n").italic = True
@@ -123,7 +125,7 @@ def build_pdf_report(
     )
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
-        "ReportTitle", parent=styles["Title"], textColor=colors.HexColor("#A855F7")
+        "ReportTitle", parent=styles["Title"], textColor=colors.HexColor("#C13CFF")
     )
     heading_style = styles["Heading2"]
     body_style = styles["BodyText"]
@@ -172,6 +174,90 @@ def build_pdf_report(
         for line in ai_suggestions.split("\n"):
             if line.strip():
                 story.append(Paragraph(line.strip(), body_style))
+
+    doc.build(story)
+    return buffer.getvalue()
+
+
+_HEADING_LINE = re.compile(r"^[A-Z][A-Z0-9 /&\-]{2,40}$")
+
+
+def build_updated_resume_pdf(resume_text: str, candidate_name: str = "") -> bytes:
+    """
+    Formats an AI-tailored resume (plain text, ALL CAPS section headers on
+    their own line, '-' bullet points -- see
+    suggestions._RESUME_REWRITE_SYSTEM_PROMPT for the exact contract) as a
+    clean, standard black-on-white PDF meant to actually be submitted to an
+    employer. Deliberately NOT styled with the app's purple/dark branding --
+    a resume you send to a recruiter should look like a normal resume.
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=LETTER,
+        topMargin=0.6 * inch,
+        bottomMargin=0.6 * inch,
+        leftMargin=0.75 * inch,
+        rightMargin=0.75 * inch,
+    )
+    styles = getSampleStyleSheet()
+    name_style = ParagraphStyle(
+        "CandidateName",
+        parent=styles["Title"],
+        textColor=colors.black,
+        fontSize=18,
+        spaceAfter=2,
+    )
+    heading_style = ParagraphStyle(
+        "ResumeHeading",
+        parent=styles["Heading2"],
+        textColor=colors.black,
+        fontSize=12,
+        spaceBefore=10,
+        spaceAfter=4,
+        borderWidth=0,
+        borderPadding=0,
+    )
+    body_style = ParagraphStyle(
+        "ResumeBody", parent=styles["BodyText"], textColor=colors.black, fontSize=10
+    )
+    bullet_style = ParagraphStyle(
+        "ResumeBullet",
+        parent=body_style,
+        leftIndent=14,
+        bulletIndent=2,
+    )
+
+    story = []
+    if candidate_name:
+        story.append(Paragraph(escape(candidate_name), name_style))
+        story.append(Spacer(1, 8))
+
+    bullets: list[ListItem] = []
+
+    def flush_bullets():
+        if bullets:
+            story.append(
+                ListFlowable(list(bullets), bulletType="bullet", leftIndent=14)
+            )
+            bullets.clear()
+
+    for raw_line in resume_text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith(("-", "•", "*")):
+            bullets.append(
+                ListItem(Paragraph(escape(line.lstrip("-•* ").strip()), bullet_style))
+            )
+            continue
+        flush_bullets()
+        if _HEADING_LINE.match(line):
+            story.append(Paragraph(escape(line.title()), heading_style))
+        else:
+            story.append(Paragraph(escape(line), body_style))
+
+    flush_bullets()
 
     doc.build(story)
     return buffer.getvalue()
