@@ -13,6 +13,7 @@ jobs with no formatting decisions to make.
 from __future__ import annotations
 
 import io
+import re
 from dataclasses import dataclass
 
 
@@ -109,22 +110,40 @@ _SECTION_KEYWORDS = {
 }
 
 
-def extract_header_lines(resume_text: str, max_lines: int = 4) -> list[str]:
+def _looks_like_section_header(line: str) -> bool:
+    lowered = line.lower().rstrip(":").strip()
+    if lowered in _SECTION_KEYWORDS:
+        return True
+    # Also catch headers phrased as e.g. "Professional Summary" or "Core
+    # Skills" -- a short line whose words fully contain one of our
+    # keywords, not just an exact match against the bare keyword.
+    if len(lowered) <= 40:
+        words = set(re.findall(r"[a-z]+", lowered))
+        for keyword in _SECTION_KEYWORDS:
+            if set(keyword.split()) <= words:
+                return True
+    return False
+
+
+def extract_header_lines(resume_text: str, max_lines: int = 6) -> list[str]:
     """
     Pulls out the first few lines of a resume -- name, job title, and
     contact details (phone/email/LinkedIn/location) -- which normally sit
     before the first real section. Used so that information always makes
     it into a rewritten/exported version of the resume, even if an AI
     rewrite step drops it.
+
+    Blank lines within that block are skipped rather than treated as the
+    end of it -- PDF text extraction often inserts a blank line between
+    the name and the contact details even though they're visually one
+    header block, and stopping there would silently drop the contact info.
     """
     header: list[str] = []
     for raw_line in resume_text.split("\n"):
         line = raw_line.strip()
         if not line:
-            if header:
-                break
             continue
-        if line.lower().rstrip(":") in _SECTION_KEYWORDS:
+        if _looks_like_section_header(line):
             break
         header.append(line)
         if len(header) >= max_lines:
