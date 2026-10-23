@@ -31,6 +31,38 @@ from reportlab.platypus import (
 from .matching import MatchResult
 from .suggestions import VerdictBand
 
+# ReportLab's built-in PDF fonts (Helvetica, etc.) only support the
+# WinAnsi/cp1252 character set. AI-generated text sometimes uses dash,
+# space, or bullet variants outside that set (e.g. a non-breaking hyphen
+# in "end-to-end"), which would otherwise render as a blank "tofu" box.
+# Normalize those to plain ASCII equivalents before building any PDF.
+_DASH_LIKE = "‐‑‒―−"  # hyphen, non-breaking hyphen,
+# figure dash, horizontal bar, minus sign
+_SPACE_LIKE = "    "
+_ZERO_WIDTH = "​‌‍﻿"
+_DASH_TRANSLATION = {ord(c): "-" for c in _DASH_LIKE}
+_SPACE_TRANSLATION = {ord(c): " " for c in _SPACE_LIKE}
+_ZERO_WIDTH_TRANSLATION = {ord(c): "" for c in _ZERO_WIDTH}
+
+
+def _pdf_safe(text: str) -> str:
+    """Normalizes text so ReportLab's base PDF fonts can render it cleanly."""
+    if not text:
+        return text
+    text = text.translate(_DASH_TRANSLATION)
+    text = text.translate(_SPACE_TRANSLATION)
+    text = text.translate(_ZERO_WIDTH_TRANSLATION)
+    # Final safety net: anything still outside cp1252 becomes a hyphen
+    # (rather than silently rendering as a missing-glyph box).
+    safe_chars = []
+    for ch in text:
+        try:
+            ch.encode("cp1252")
+            safe_chars.append(ch)
+        except UnicodeEncodeError:
+            safe_chars.append("-")
+    return "".join(safe_chars)
+
 
 def _report_sections(
     resume_name: str,
@@ -134,14 +166,14 @@ def build_pdf_report(
     story = [
         Paragraph("Job Stitch Report", title_style),
         Spacer(1, 6),
-        Paragraph(f"Resume: {resume_name}", italic_style),
-        Paragraph(f"Job description: {jd_name}", italic_style),
+        Paragraph(f"Resume: {_pdf_safe(resume_name)}", italic_style),
+        Paragraph(f"Job description: {_pdf_safe(jd_name)}", italic_style),
         Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", italic_style),
         Spacer(1, 14),
         Paragraph("Overall Match", heading_style),
         Paragraph(f"<b>{match.overall_score} / 100 — {verdict.label}</b>", body_style),
         Spacer(1, 4),
-        Paragraph(verdict.message, body_style),
+        Paragraph(_pdf_safe(verdict.message), body_style),
         Spacer(1, 4),
         Paragraph(
             f"Skill overlap score: {match.skill_overlap_score}/100 &nbsp;&nbsp; "
@@ -151,19 +183,19 @@ def build_pdf_report(
         Spacer(1, 10),
         Paragraph("Matched Skills", heading_style),
         Paragraph(
-            ", ".join(match.matched_skills) if match.matched_skills else "None detected.",
+            _pdf_safe(", ".join(match.matched_skills)) if match.matched_skills else "None detected.",
             body_style,
         ),
         Spacer(1, 10),
         Paragraph("Skills in the JD but not your resume", heading_style),
         Paragraph(
-            ", ".join(match.missing_skills) if match.missing_skills else "None — great coverage!",
+            _pdf_safe(", ".join(match.missing_skills)) if match.missing_skills else "None — great coverage!",
             body_style,
         ),
         Spacer(1, 10),
         Paragraph("Suggestions", heading_style),
         ListFlowable(
-            [ListItem(Paragraph(tip, body_style)) for tip in suggestions],
+            [ListItem(Paragraph(_pdf_safe(tip), body_style)) for tip in suggestions],
             bulletType="bullet",
         ),
     ]
@@ -173,7 +205,7 @@ def build_pdf_report(
         story.append(Paragraph("AI-Powered Suggestions", heading_style))
         for line in ai_suggestions.split("\n"):
             if line.strip():
-                story.append(Paragraph(line.strip(), body_style))
+                story.append(Paragraph(_pdf_safe(line.strip()), body_style))
 
     doc.build(story)
     return buffer.getvalue()
@@ -230,7 +262,7 @@ def build_updated_resume_pdf(resume_text: str, candidate_name: str = "") -> byte
 
     story = []
     if candidate_name:
-        story.append(Paragraph(escape(candidate_name), name_style))
+        story.append(Paragraph(escape(_pdf_safe(candidate_name)), name_style))
         story.append(Spacer(1, 8))
 
     bullets: list[ListItem] = []
@@ -243,7 +275,7 @@ def build_updated_resume_pdf(resume_text: str, candidate_name: str = "") -> byte
             bullets.clear()
 
     for raw_line in resume_text.split("\n"):
-        line = raw_line.strip()
+        line = _pdf_safe(raw_line.strip())
         if not line:
             continue
         if line.startswith(("-", "•", "*")):
